@@ -2,8 +2,7 @@ import custom_exception.FAEndSetException;
 import custom_exception.FAStartSetException;
 import custom_exception.REFormatIncorrectException;
 
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 public class Lex {
     public String REInOrder2PostOrder(String RE){
@@ -104,6 +103,54 @@ public class Lex {
     }
 
     public FA NFA2DFA(FA NFA){
+        List<Set<FANode>> newNodes = List.of(NFA.getEClosure(Set.of(NFA.getStart().next())));
+        Map<Set<FANode>, FANode> reflection = Map.of(newNodes.get(0), new FANode());
 
+        //遍历新状态表
+        for (int i = 0; i < newNodes.size(); i++) {
+            Set<FANode> currentNode = newNodes.get(i);
+
+            //找出当前新状态的所有下一状态
+            Map<Character, Set<FANode>> newOuts = new HashMap<>();
+            for (FANode node : currentNode) {
+                Iterator<FAEdge> edgeIterator = node.getOuts();
+                while (edgeIterator.hasNext()){
+                    FAEdge edge = edgeIterator.next();
+                    if (edge.getC() != 0){ //排除E边
+                        if (newOuts.containsKey(edge.getC())){
+                            newOuts.get(edge.getC()).add(edge.getNode());
+                        }else {
+                            newOuts.put(edge.getC(), Set.of(edge.getNode()));
+                        }
+                    }
+                }
+            }
+            for (Character c : newOuts.keySet()) {
+                newOuts.put(c, NFA.getEClosure(newOuts.get(c)));
+            }
+
+            //将新的状态加入新状态表
+            for (Set<FANode> newNode : newOuts.values()) {
+                if (!listContains(newNodes, newNode)) newNodes.add(newNode);
+            }
+
+            //记录当前新状态的所有出边
+            FANode node = reflection.get(currentNode);
+            for (Character c : newOuts.keySet()) {
+                node.addOut(new FAEdge(c, reflection.get(newOuts.get(c))));
+            }
+        }
+
+        Set<FANode> start = new HashSet<>();
+        Set<FANode> end = new HashSet<>();
+
+        try {
+            return new FA(start, end);
+        } catch (FAStartSetException e) {
+            e.printStackTrace();
+        } catch (FAEndSetException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
