@@ -29,7 +29,11 @@ public class Lex {
 
                     //把新的FA压栈
                     try {
-                        stack.push(new FA(Set.of(start1), Set.of(end1)));
+                        Set<FANode> start = new HashSet<>();
+                        start.add(start1);
+                        Set<FANode> end = new HashSet<>();
+                        end.add(end1);
+                        stack.push(new FA(start, end));
                     } catch (FAStartSetException e) {
                         e.printStackTrace();
                     } catch (FAEndSetException e) {
@@ -50,7 +54,11 @@ public class Lex {
 
                     //把新的FA压栈
                     try {
-                        stack.push(new FA(Set.of(start2), Set.of(end2)));
+                        Set<FANode> start = new HashSet<>();
+                        start.add(start2);
+                        Set<FANode> end = new HashSet<>();
+                        end.add(end2);
+                        stack.push(new FA(start, end));
                     } catch (FAStartSetException e) {
                         e.printStackTrace();
                     } catch (FAEndSetException e) {
@@ -72,7 +80,11 @@ public class Lex {
 
                     //把新的FA压栈
                     try {
-                        stack.push(new FA(Set.of(start3), Set.of(end3)));
+                        Set<FANode> start = new HashSet<>();
+                        start.add(start3);
+                        Set<FANode> end = new HashSet<>();
+                        end.add(end3);
+                        stack.push(new FA(start, end));
                     } catch (FAStartSetException e) {
                         e.printStackTrace();
                     } catch (FAEndSetException e) {
@@ -87,7 +99,11 @@ public class Lex {
 
                     //把FA压栈
                     try {
-                        stack.push(new FA(Set.of(start4), Set.of(end4)));
+                        Set<FANode> start = new HashSet<>();
+                        start.add(start4);
+                        Set<FANode> end = new HashSet<>();
+                        end.add(end4);
+                        stack.push(new FA(start, end));
                     } catch (FAStartSetException e) {
                         e.printStackTrace();
                     } catch (FAEndSetException e) {
@@ -103,8 +119,10 @@ public class Lex {
     }
 
     public FA NFA2DFA(FA NFA){
-        List<Set<FANode>> newNodes = List.of(NFA.getEClosure(Set.of(NFA.getStart().next())));
-        Map<Set<FANode>, FANode> reflection = Map.of(newNodes.get(0), new FANode());
+        List<Set<FANode>> newNodes = new ArrayList<>();
+        newNodes.add(NFA.getEClosure(Set.of(NFA.getStart().next())));
+        Map<Set<FANode>, FANode> reflection = new HashMap<>();
+        reflection.put(newNodes.get(0), new FANode());
 
         //遍历新状态表
         for (int i = 0; i < newNodes.size(); i++) {
@@ -120,7 +138,9 @@ public class Lex {
                         if (newOuts.containsKey(edge.getC())){
                             newOuts.get(edge.getC()).add(edge.getNode());
                         }else {
-                            newOuts.put(edge.getC(), Set.of(edge.getNode()));
+                            Set<FANode> nodes = new HashSet<>();
+                            nodes.add(edge.getNode());
+                            newOuts.put(edge.getC(), nodes);
                         }
                     }
                 }
@@ -131,7 +151,10 @@ public class Lex {
 
             //将新的状态加入新状态表
             for (Set<FANode> newNode : newOuts.values()) {
-                if (!listContains(newNodes, newNode)) newNodes.add(newNode);
+                if (!listContains(newNodes, newNode)) {
+                    newNodes.add(newNode);
+                    reflection.put(newNode, new FANode());
+                }
             }
 
             //记录当前新状态的所有出边
@@ -143,7 +166,10 @@ public class Lex {
 
         Set<FANode> start = new HashSet<>();
         Set<FANode> end = new HashSet<>();
-
+        start.add(reflection.get(newNodes.get(0)));
+        for (Set<FANode> newNode : newNodes) {
+            if (newNode.contains(NFA.getEnd().next())) end.add(reflection.get(newNode));
+        }
         try {
             return new FA(start, end);
         } catch (FAStartSetException e) {
@@ -152,5 +178,16 @@ public class Lex {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public FA DFA2DFA0(FA DFA){
+        return null;
+    }
+
+    private boolean listContains(List<Set<FANode>> list, Set<FANode> e){
+        for (Set<FANode> eIn : list) {
+            if (eIn.containsAll(e) && e.containsAll(eIn)) return true;
+        }
+        return false;
     }
 }
