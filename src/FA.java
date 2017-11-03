@@ -6,14 +6,12 @@ import java.util.*;
 public class FA {
     private Set<FANode> start;
     private Set<FANode> end;
-    private Set<Character> alphabet;
 
     public FA(Set<FANode> start, Set<FANode> end) throws FAStartSetException, FAEndSetException {
         if (start.isEmpty()) throw new FAStartSetException();
         if (end.isEmpty()) throw new FAEndSetException();
         this.start = start;
         this.end = end;
-
     }
 
     public Iterator<FANode> getStart() {
