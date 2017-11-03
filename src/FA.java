@@ -4,18 +4,18 @@ import custom_exception.FAStartSetException;
 import java.util.*;
 
 public class FA {
-    private Set<FANode> start;
+    private FANode start;
     private Set<FANode> end;
 
-    public FA(Set<FANode> start, Set<FANode> end) throws FAStartSetException, FAEndSetException {
-        if (start.isEmpty()) throw new FAStartSetException();
+    public FA(FANode start, Set<FANode> end) throws FAStartSetException, FAEndSetException {
+        if (start == null) throw new FAStartSetException();
         if (end.isEmpty()) throw new FAEndSetException();
         this.start = start;
         this.end = end;
     }
 
-    public Iterator<FANode> getStart() {
-        return start.iterator();
+    public FANode getStart() {
+        return start;
     }
 
     public Iterator<FANode> getEnd() {

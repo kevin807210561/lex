@@ -17,7 +17,7 @@ public class LexTest {
     @Test
     public void RE2NFA() throws Exception {
         FA nfa = lex.RE2NFA("ab*|");
-        Set<FANode> nodes = nfa.getEClosure(Set.of(nfa.getStart().next()));
+        Set<FANode> nodes = nfa.getEClosure(Set.of(nfa.getStart()));
         FA dfa = lex.NFA2DFA(nfa);
         System.out.println();
     }
