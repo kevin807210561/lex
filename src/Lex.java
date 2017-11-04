@@ -5,17 +5,40 @@ import custom_exception.REFormatIncorrectException;
 import java.util.*;
 
 public class Lex {
-    public String REInOrder2PostOrder(String RE){
-        return RE;
+    public FA MultipleREs2SingleNFA(List<Token> tokens) throws REFormatIncorrectException {
+        List<FA> NFAs = new ArrayList<>();
+        for (Token token : tokens) {
+            NFAs.add(RE2NFA(token));
+        }
+
+        FANode start = new FANode();
+        Set<FANode> end = new HashSet<>();
+        for (FA NFA : NFAs) {
+            start.addOut(new FAEdge('\0', NFA.getStart()));
+            Iterator<FANode> nodeIterator = NFA.getEnd();
+            while (nodeIterator.hasNext()){
+                end.add(nodeIterator.next());
+            }
+        }
+        try {
+            return new FA(start, end);
+        } catch (FAStartSetException e) {
+            e.printStackTrace();
+        } catch (FAEndSetException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    public FA RE2NFA(String RE) throws REFormatIncorrectException {
-        if (RE.length() == 0) return null;
+    public FA RE2NFA(Token token) throws REFormatIncorrectException {
+        if (token.getPattern().length() == 0) return null;
 
-        RE = REInOrder2PostOrder(RE);
+        String RE = REInOrder2PostOrder(token.getPattern());
 
         Stack<FA> stack = new Stack<>();
         for (char c : RE.toCharArray()) {
+            FANode start;
+            Set<FANode> end = new HashSet<>();
             switch (c){
                 case '#':
                     if (stack.size() < 2) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
@@ -23,90 +46,60 @@ public class Lex {
                     //把栈顶的两个FA取出产生新的FA
                     FA fa2 = stack.pop();
                     FA fa1 = stack.pop();
-                    FANode start1 = fa1.getStart();
+                    start = fa1.getStart();
                     FANode end1 = fa2.getEnd().next();
                     fa1.getEnd().next().addOut(new FAEdge('\0', fa2.getStart()));
-
-                    //把新的FA压栈
-                    try {
-                        Set<FANode> end = new HashSet<>();
-                        end.add(end1);
-                        stack.push(new FA(start1, end));
-                    } catch (FAStartSetException e) {
-                        e.printStackTrace();
-                    } catch (FAEndSetException e) {
-                        e.printStackTrace();
-                    }
+                    end.add(end1);
                     break;
                 case '*':
                     if (stack.empty()) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
 
                     //把栈顶的FA取出产生新的FA
-                    FANode start2 = new FANode();
+                    start = new FANode();
                     FANode end2 = new FANode();
-                    start2.addOut(new FAEdge('\0', stack.peek().getStart()));
-                    start2.addOut(new FAEdge('\0', end2));
+                    start.addOut(new FAEdge('\0', stack.peek().getStart()));
+                    start.addOut(new FAEdge('\0', end2));
                     stack.peek().getEnd().next().addOut(new FAEdge('\0', end2));
                     stack.peek().getEnd().next().addOut(new FAEdge('\0', stack.peek().getStart()));
                     stack.pop();
-
-                    //把新的FA压栈
-                    try {
-                        Set<FANode> end = new HashSet<>();
-                        end.add(end2);
-                        stack.push(new FA(start2, end));
-                    } catch (FAStartSetException e) {
-                        e.printStackTrace();
-                    } catch (FAEndSetException e) {
-                        e.printStackTrace();
-                    }
+                    end.add(end2);
                     break;
                 case '|':
                     if (stack.size() < 2) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
 
                     //把栈顶的两个FA取出产生新的FA
-                    FANode start3 = new FANode();
+                    start = new FANode();
                     FANode end3 = new FANode();
-                    start3.addOut(new FAEdge('\0', stack.peek().getStart()));
+                    start.addOut(new FAEdge('\0', stack.peek().getStart()));
                     stack.peek().getEnd().next().addOut(new FAEdge('\0', end3));
                     stack.pop();
-                    start3.addOut(new FAEdge('\0', stack.peek().getStart()));
+                    start.addOut(new FAEdge('\0', stack.peek().getStart()));
                     stack.peek().getEnd().next().addOut(new FAEdge('\0', end3));
                     stack.pop();
-
-                    //把新的FA压栈
-                    try {
-                        Set<FANode> end = new HashSet<>();
-                        end.add(end3);
-                        stack.push(new FA(start3, end));
-                    } catch (FAStartSetException e) {
-                        e.printStackTrace();
-                    } catch (FAEndSetException e) {
-                        e.printStackTrace();
-                    }
+                    end.add(end3);
                     break;
                 default:
                     //产生FA
-                    FANode start4 = new FANode();
+                    start = new FANode();
                     FANode end4 = new FANode();
-                    start4.addOut(new FAEdge(c, end4));
-
-                    //把FA压栈
-                    try {
-                        Set<FANode> end = new HashSet<>();
-                        end.add(end4);
-                        stack.push(new FA(start4, end));
-                    } catch (FAStartSetException e) {
-                        e.printStackTrace();
-                    } catch (FAEndSetException e) {
-                        e.printStackTrace();
-                    }
+                    start.addOut(new FAEdge(c, end4));
+                    end.add(end4);
                     break;
+            }
+            //把新的FA压栈
+            try {
+                stack.push(new FA(start, end));
+            } catch (FAStartSetException e) {
+                e.printStackTrace();
+            } catch (FAEndSetException e) {
+                e.printStackTrace();
             }
         }
 
         if (stack.size() > 1) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
 
+        stack.peek().getEnd().next().setToken(token);
+        stack.peek().getEnd().next().setEnd(true);
         return stack.pop();
     }
 
@@ -156,10 +149,29 @@ public class Lex {
             }
         }
 
+        //确定初始状态和接受状态
         FANode start = reflection.get(newNodes.get(0));
         Set<FANode> end = new HashSet<>();
         for (Set<FANode> newNode : newNodes) {
-            if (newNode.contains(NFA.getEnd().next())) end.add(reflection.get(newNode));
+            for (FANode node : newNode) {
+                if (node.isEnd()){
+                    //确定接受状态对应的token, 挑选在.l文件中最先出现的token
+                    FANode tokenNode = new FANode();
+                    for (FANode node1 : newNode) {
+                        if (node1.getTokenPriority() < tokenNode.getTokenPriority()){
+                            tokenNode = node1;
+                        }
+                    }
+
+                    FANode endNode = reflection.get(newNode);
+                    endNode.setTokenName(tokenNode.getTokenName());
+                    endNode.setTokenPriority(tokenNode.getTokenPriority());
+                    endNode.setEnd(true);
+                    end.add(endNode);
+
+                    break;
+                }
+            }
         }
         try {
             return new FA(start, end);
@@ -173,6 +185,20 @@ public class Lex {
 
     public FA DFA2DFA0(FA DFA){
         return null;
+    }
+
+    public String DFA2Code(FA DFA){
+        String s = "case :\n" +
+                "    if(c == ''){\n" +
+                "\n" +
+                "        }\n" +
+                "\n" +
+                "    break;";
+        return null;
+    }
+
+    public String REInOrder2PostOrder(String RE){
+        return RE;
     }
 
     private boolean listContains(List<Set<FANode>> list, Set<FANode> e){
