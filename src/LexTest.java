@@ -5,6 +5,7 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 public class LexTest {
+
     private Lex lex;
 
     @org.junit.Before
@@ -19,6 +20,12 @@ public class LexTest {
         Set<FANode> nodes = nfa.getEClosure(Set.of(nfa.getStart()));
         FA dfa = lex.NFA2DFA(nfa);
 
+        char c = (char)-1;
+
+        for (int i = 0; i < 10; i++) {
+            System.out.println(dfa.hashCode());
+        }
+        System.out.println(lex.DFA2Code(dfa));
         System.out.println();
     }
 

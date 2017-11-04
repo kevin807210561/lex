@@ -188,13 +188,54 @@ public class Lex {
     }
 
     public String DFA2Code(FA DFA){
-        String s = "case :\n" +
-                "    if(c == ''){\n" +
-                "\n" +
-                "        }\n" +
-                "\n" +
-                "    break;";
-        return null;
+        return DFA2CodeHelper(DFA.getStart());
+    }
+
+    private String DFA2CodeHelper(FANode node){
+        if (node == null || node.isScanned())
+            return "";
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("case ");
+        stringBuilder.append(node.hashCode());
+        stringBuilder.append(":");
+        Iterator<FAEdge> edgeIterator = node.getOuts();
+        while (edgeIterator.hasNext()){
+            FAEdge edge = edgeIterator.next();
+            stringBuilder.append("if(c == '");
+            stringBuilder.append(edge.getC());
+            stringBuilder.append("'){ currentState = ");
+            stringBuilder.append(edge.getNode().hashCode());
+            stringBuilder.append(";}else ");
+        }
+        if (node.isEnd()){
+            //打印token
+            stringBuilder.append("{System.out.print(\"<");
+            stringBuilder.append(node.getTokenName());
+            stringBuilder.append("> \");");
+            //重置开始状态
+            stringBuilder.append("currentState = startState;");
+            //回退字符
+            stringBuilder.append("}");
+        }else {
+            //回退字符
+            //报错
+            stringBuilder.append("{System.out.print(\"");
+            stringBuilder.append(node.getTokenName());
+            stringBuilder.append("> \";");
+            //终止扫描字符
+            stringBuilder.append("}");
+        }
+        stringBuilder.append("break;");
+        node.setScanned(true);
+        System.out.println(node.hashCode());
+
+        Iterator<FAEdge> edges = node.getOuts();
+        while (edges.hasNext()){
+            stringBuilder.append(DFA2CodeHelper(edges.next().getNode()));
+        }
+
+        return stringBuilder.toString();
     }
 
     public String REInOrder2PostOrder(String RE){

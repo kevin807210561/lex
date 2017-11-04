@@ -7,12 +7,14 @@ public class FANode {
     private String tokenName;
     private int tokenPriority;
     private boolean isEnd;
+    private boolean isScanned;
 
     public FANode(){
         this.outs = new ArrayList<>();
         tokenName = null;
         tokenPriority = Integer.MAX_VALUE;
         isEnd = false;
+        isScanned = false;
     }
 
     public FANode(List<FAEdge> outs) {
@@ -54,5 +56,13 @@ public class FANode {
 
     public void setTokenPriority(int tokenPriority) {
         this.tokenPriority = tokenPriority;
+    }
+
+    public boolean isScanned() {
+        return isScanned;
+    }
+
+    public void setScanned(boolean scanned) {
+        isScanned = scanned;
     }
 }
