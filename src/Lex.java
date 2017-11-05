@@ -1,6 +1,11 @@
 import custom_exception.FAEndSetException;
 import custom_exception.FAStartSetException;
 import custom_exception.REFormatIncorrectException;
+import data_structure.FA;
+import data_structure.FAEdge;
+import data_structure.FANode;
+import data_structure.Token;
+import tool.RegExConverter;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,7 +24,7 @@ public class Lex {
         for (FA NFA : NFAs) {
             start.addOut(new FAEdge('\0', NFA.getStart()));
             Iterator<FANode> nodeIterator = NFA.getEnd();
-            while (nodeIterator.hasNext()){
+            while (nodeIterator.hasNext()) {
                 end.add(nodeIterator.next());
             }
         }
@@ -36,15 +41,16 @@ public class Lex {
     public FA RE2NFA(Token token) throws REFormatIncorrectException {
         if (token.getPattern().length() == 0) return null;
 
-        String RE = REInOrder2PostOrder(token.getPattern());
+        String RE = RegExConverter.infixToPostfix(token.getPattern());
 
         Stack<FA> stack = new Stack<>();
         for (char c : RE.toCharArray()) {
             FANode start;
             Set<FANode> end = new HashSet<>();
-            switch (c){
+            switch (c) {
                 case '#':
-                    if (stack.size() < 2) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
+                    if (stack.size() < 2)
+                        throw new REFormatIncorrectException("Please check the content of " + RE + ".");
 
                     //把栈顶的两个FA取出产生新的FA
                     FA fa2 = stack.pop();
@@ -68,7 +74,8 @@ public class Lex {
                     end.add(end2);
                     break;
                 case '|':
-                    if (stack.size() < 2) throw new REFormatIncorrectException("Please check the content of " + RE + ".");
+                    if (stack.size() < 2)
+                        throw new REFormatIncorrectException("Please check the content of " + RE + ".");
 
                     //把栈顶的两个FA取出产生新的FA
                     start = new FANode();
@@ -106,7 +113,7 @@ public class Lex {
         return stack.pop();
     }
 
-    public FA NFA2DFA(FA NFA){
+    public FA NFA2DFA(FA NFA) {
         List<Set<FANode>> newNodes = new ArrayList<>();
         newNodes.add(NFA.getEClosure(Set.of(NFA.getStart())));
         Map<Set<FANode>, FANode> reflection = new HashMap<>();
@@ -120,12 +127,12 @@ public class Lex {
             Map<Character, Set<FANode>> newOuts = new HashMap<>();
             for (FANode node : currentNode) {
                 Iterator<FAEdge> edgeIterator = node.getOuts();
-                while (edgeIterator.hasNext()){
+                while (edgeIterator.hasNext()) {
                     FAEdge edge = edgeIterator.next();
-                    if (edge.getC() != 0){ //排除E边
-                        if (newOuts.containsKey(edge.getC())){
+                    if (edge.getC() != 0) { //排除E边
+                        if (newOuts.containsKey(edge.getC())) {
                             newOuts.get(edge.getC()).add(edge.getNode());
-                        }else {
+                        } else {
                             Set<FANode> nodes = new HashSet<>();
                             nodes.add(edge.getNode());
                             newOuts.put(edge.getC(), nodes);
@@ -157,11 +164,11 @@ public class Lex {
         Set<FANode> end = new HashSet<>();
         for (Set<FANode> newNode : newNodes) {
             for (FANode node : newNode) {
-                if (node.isEnd()){
+                if (node.isEnd()) {
                     //确定接受状态对应的token, 挑选在.l文件中最先出现的token
                     FANode tokenNode = new FANode();
                     for (FANode node1 : newNode) {
-                        if (node1.getTokenPriority() < tokenNode.getTokenPriority()){
+                        if (node1.getTokenPriority() < tokenNode.getTokenPriority()) {
                             tokenNode = node1;
                         }
                     }
@@ -186,7 +193,7 @@ public class Lex {
         return null;
     }
 
-    public String DFA2Code(FA DFA){
+    public String DFA2Code(FA DFA) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("import java.io.BufferedReader;\n" +
                 "import java.io.FileNotFoundException;\n" +
@@ -196,7 +203,7 @@ public class Lex {
                 "import java.util.Scanner;\n" +
                 "import java.util.stream.Collectors;\n" +
                 "\n" +
-                "public class LexicalAnalyser {\n" +
+                "public class ouput.LexicalAnalyser {\n" +
                 "    private List<String> input;\n" +
                 "    private int startState;\n" +
                 "    private int currentState;\n" +
@@ -209,7 +216,7 @@ public class Lex {
                 "            try {\n" +
                 "                System.out.println(\"Please input the path of the file to be analysied:\");\n" +
                 "                BufferedReader fileReader = new BufferedReader(new FileReader(new Scanner(System.in).nextLine()));\n" +
-                "                LexicalAnalyser lexicalAnalyser = new LexicalAnalyser(fileReader.lines().collect(Collectors.toList()), ");
+                "                ouput.LexicalAnalyser lexicalAnalyser = new ouput.LexicalAnalyser(fileReader.lines().collect(Collectors.toList()), ");
         stringBuilder.append(DFA.getStart().hashCode());
         stringBuilder.append(");\n" +
                 "                lexicalAnalyser.getToken();\n" +
@@ -221,7 +228,7 @@ public class Lex {
                 "        }\n" +
                 "    }\n" +
                 "\n" +
-                "    public LexicalAnalyser(List<String> input, int startState) {\n" +
+                "    public ouput.LexicalAnalyser(List<String> input, int startState) {\n" +
                 "        this.input = input;\n" +
                 "        for (int i = 0; i < input.size() - 1; i++) {\n" +
                 "            this.input.set(i, this.input.get(i).concat(\"\" + '\\n'));\n" +
@@ -279,7 +286,7 @@ public class Lex {
         return file.getAbsolutePath();
     }
 
-    private String DFA2CodeHelper(FANode node, boolean isBegin){
+    private String DFA2CodeHelper(FANode node, boolean isBegin) {
         if (node == null || node.isScanned())
             return "";
 
@@ -288,7 +295,7 @@ public class Lex {
         stringBuilder.append(node.hashCode());
         stringBuilder.append(":");
         Iterator<FAEdge> edgeIterator = node.getOuts();
-        while (edgeIterator.hasNext()){
+        while (edgeIterator.hasNext()) {
             FAEdge edge = edgeIterator.next();
             stringBuilder.append("if(c == '");
             stringBuilder.append(edge.getC());
@@ -296,7 +303,7 @@ public class Lex {
             stringBuilder.append(edge.getNode().hashCode());
             stringBuilder.append(";isBegin = false;}else ");
         }
-        if (isBegin && node.isEnd()){
+        if (isBegin && node.isEnd()) {
             if (node.getOuts().hasNext()) stringBuilder.append("{");
             //accept
             stringBuilder.append("if(isBegin) fail();else ");
@@ -304,14 +311,14 @@ public class Lex {
             stringBuilder.append(node.getTokenName());
             stringBuilder.append("\");");
             if (node.getOuts().hasNext()) stringBuilder.append("}");
-        }else if (node.isEnd()){
+        } else if (node.isEnd()) {
             if (node.getOuts().hasNext()) stringBuilder.append("{");
             //accept
             stringBuilder.append("accept(\"");
             stringBuilder.append(node.getTokenName());
             stringBuilder.append("\");");
             if (node.getOuts().hasNext()) stringBuilder.append("}");
-        }else {
+        } else {
             if (node.getOuts().hasNext()) stringBuilder.append("{");
             //fail
             stringBuilder.append("fail();");
@@ -319,21 +326,16 @@ public class Lex {
         }
         stringBuilder.append("break;");
         node.setScanned(true);
-        System.out.println(node.hashCode());
 
         Iterator<FAEdge> edges = node.getOuts();
-        while (edges.hasNext()){
+        while (edges.hasNext()) {
             stringBuilder.append(DFA2CodeHelper(edges.next().getNode(), false));
         }
 
         return stringBuilder.toString();
     }
 
-    private String REInOrder2PostOrder(String RE){
-        return RE;
-    }
-
-    private boolean listContains(List<Set<FANode>> list, Set<FANode> e){
+    private boolean listContains(List<Set<FANode>> list, Set<FANode> e) {
         for (Set<FANode> eIn : list) {
             if (eIn.containsAll(e) && e.containsAll(eIn)) return true;
         }

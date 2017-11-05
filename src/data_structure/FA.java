@@ -1,3 +1,5 @@
+package data_structure;
+
 import custom_exception.FAEndSetException;
 import custom_exception.FAStartSetException;
 

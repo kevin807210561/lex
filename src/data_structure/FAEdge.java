@@ -1,3 +1,5 @@
+package data_structure;
+
 public class FAEdge {
     private char c;
     private FANode node;
