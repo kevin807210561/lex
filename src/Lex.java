@@ -2,6 +2,9 @@ import custom_exception.FAEndSetException;
 import custom_exception.FAStartSetException;
 import custom_exception.REFormatIncorrectException;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 public class Lex {
@@ -183,15 +186,100 @@ public class Lex {
         return null;
     }
 
-    public FA DFA2DFA0(FA DFA){
-        return null;
-    }
-
     public String DFA2Code(FA DFA){
-        return DFA2CodeHelper(DFA.getStart());
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("import java.io.BufferedReader;\n" +
+                "import java.io.FileNotFoundException;\n" +
+                "import java.io.FileReader;\n" +
+                "import java.io.IOException;\n" +
+                "import java.util.List;\n" +
+                "import java.util.Scanner;\n" +
+                "import java.util.stream.Collectors;\n" +
+                "\n" +
+                "public class LexicalAnalyser {\n" +
+                "    private List<String> input;\n" +
+                "    private int startState;\n" +
+                "    private int currentState;\n" +
+                "    private boolean isBegin;\n" +
+                "    private int i;\n" +
+                "    private int j;\n" +
+                "\n" +
+                "    public static void main(String[] args) {\n" +
+                "        while (true) {\n" +
+                "            try {\n" +
+                "                System.out.println(\"Please input the path of the file to be analysied:\");\n" +
+                "                BufferedReader fileReader = new BufferedReader(new FileReader(new Scanner(System.in).nextLine()));\n" +
+                "                LexicalAnalyser lexicalAnalyser = new LexicalAnalyser(fileReader.lines().collect(Collectors.toList()), ");
+        stringBuilder.append(DFA.getStart().hashCode());
+        stringBuilder.append(");\n" +
+                "                lexicalAnalyser.getToken();\n" +
+                "            } catch (FileNotFoundException e) {\n" +
+                "                System.out.println(\"File input invalid.\");\n" +
+                "            } catch (IOException e) {\n" +
+                "                System.out.println(\"An I/O error happened.\");\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    public LexicalAnalyser(List<String> input, int startState) {\n" +
+                "        this.input = input;\n" +
+                "        for (int i = 0; i < input.size() - 1; i++) {\n" +
+                "            this.input.set(i, this.input.get(i).concat(\"\" + '\\n'));\n" +
+                "        }\n" +
+                "        this.input.set(this.input.size() - 1, this.input.get(this.input.size() - 1).concat(\"\" + '\\0'));\n" +
+                "        this.startState = startState;\n" +
+                "        this.currentState = startState;\n" +
+                "        this.isBegin = true;\n" +
+                "        i = 0;\n" +
+                "        j = 0;\n" +
+                "    }\n" +
+                "\n" +
+                "    public void getToken() throws IOException {\n" +
+                "        int c;\n" +
+                "        for (i = 0; i < input.size(); i++) {\n" +
+                "            for (j = 0; j < input.get(i).length(); j++) {\n" +
+                "                c = input.get(i).charAt(j);\n" +
+                "                switch (currentState) {");
+        stringBuilder.append(DFA2CodeHelper(DFA.getStart(), true));
+        stringBuilder.append("}\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    private void fail() throws IOException {\n" +
+                "        System.out.println();\n" +
+                "        System.out.print(\"An error occurred. Please check the content near \\\"\" + input.get(i).substring(j, Math.min(j + 20, input.get(i).length())) + \"\\\" at line \" + (i + 1) + \".\");\n" +
+                "        System.out.println();\n" +
+                "        System.exit(-1);\n" +
+                "    }\n" +
+                "\n" +
+                "    private void accept(String tokenName) throws IOException {\n" +
+                "        System.out.println(\"<\" + tokenName + \"> \");\n" +
+                "        currentState = startState;\n" +
+                "        isBegin = true;\n" +
+                "        if (i != input.size() - 1 || j != input.get(i).length() - 1)j--;\n" +
+                "    }\n" +
+                "}");
+
+        File file = new File("LexicalAnalyser.java");
+        if (!file.exists()) try {
+            file.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            FileWriter fileWriter = new FileWriter(file);
+            fileWriter.write(stringBuilder.toString());
+            fileWriter.flush();
+            fileWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return file.getAbsolutePath();
     }
 
-    private String DFA2CodeHelper(FANode node){
+    private String DFA2CodeHelper(FANode node, boolean isBegin){
         if (node == null || node.isScanned())
             return "";
 
@@ -206,25 +294,28 @@ public class Lex {
             stringBuilder.append(edge.getC());
             stringBuilder.append("'){ currentState = ");
             stringBuilder.append(edge.getNode().hashCode());
-            stringBuilder.append(";}else ");
+            stringBuilder.append(";isBegin = false;}else ");
         }
-        if (node.isEnd()){
-            //打印token
-            stringBuilder.append("{System.out.print(\"<");
+        if (isBegin && node.isEnd()){
+            if (node.getOuts().hasNext()) stringBuilder.append("{");
+            //accept
+            stringBuilder.append("if(isBegin) fail();else ");
+            stringBuilder.append("accept(\"");
             stringBuilder.append(node.getTokenName());
-            stringBuilder.append("> \");");
-            //重置开始状态
-            stringBuilder.append("currentState = startState;");
-            //回退字符
-            stringBuilder.append("}");
+            stringBuilder.append("\");");
+            if (node.getOuts().hasNext()) stringBuilder.append("}");
+        }else if (node.isEnd()){
+            if (node.getOuts().hasNext()) stringBuilder.append("{");
+            //accept
+            stringBuilder.append("accept(\"");
+            stringBuilder.append(node.getTokenName());
+            stringBuilder.append("\");");
+            if (node.getOuts().hasNext()) stringBuilder.append("}");
         }else {
-            //回退字符
-            //报错
-            stringBuilder.append("{System.out.print(\"");
-            stringBuilder.append(node.getTokenName());
-            stringBuilder.append("> \";");
-            //终止扫描字符
-            stringBuilder.append("}");
+            if (node.getOuts().hasNext()) stringBuilder.append("{");
+            //fail
+            stringBuilder.append("fail();");
+            if (node.getOuts().hasNext()) stringBuilder.append("}");
         }
         stringBuilder.append("break;");
         node.setScanned(true);
@@ -232,13 +323,13 @@ public class Lex {
 
         Iterator<FAEdge> edges = node.getOuts();
         while (edges.hasNext()){
-            stringBuilder.append(DFA2CodeHelper(edges.next().getNode()));
+            stringBuilder.append(DFA2CodeHelper(edges.next().getNode(), false));
         }
 
         return stringBuilder.toString();
     }
 
-    public String REInOrder2PostOrder(String RE){
+    private String REInOrder2PostOrder(String RE){
         return RE;
     }
 

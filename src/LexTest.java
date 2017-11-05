@@ -5,7 +5,6 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 public class LexTest {
-
     private Lex lex;
 
     @org.junit.Before
@@ -16,7 +15,7 @@ public class LexTest {
     @Test
     public void RE2NFA() throws Exception {
 //        FA nfa = lex.RE2NFA(new Token("random", "ab*|", 1, "none"));
-        FA nfa = lex.MultipleREs2SingleNFA(List.of(new Token("random1", "fcvhgab|||||*|", 1, "none"), new Token("random0", "a", 0, "none")));
+        FA nfa = lex.MultipleREs2SingleNFA(List.of(new Token("random1", "fcv|*|", 1, "none"), new Token("random0", "abcd###", 0, "none")));
         Set<FANode> nodes = nfa.getEClosure(Set.of(nfa.getStart()));
         FA dfa = lex.NFA2DFA(nfa);
 
@@ -26,10 +25,10 @@ public class LexTest {
             System.out.println(dfa.hashCode());
         }
         System.out.println(lex.DFA2Code(dfa));
-        System.out.println();
-    }
 
-    @Test
-    public void NFA2DFA() throws Exception {
+
+        String a = "b";
+        a = a.concat("" + '\0');
+        System.out.println();
     }
 }
